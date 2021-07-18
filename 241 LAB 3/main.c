@@ -1,19 +1,16 @@
+
 #include <stdio.h>
 #include <cmsis_os2.h>
 #include <stdio.h> 
 #include <stdbool.h>
-#include <lpc17xx.h>
+//#include <lpc17xx.h>
 
+//Lab 3 Threading Code
+//Stephanie Skarica and Elizabeth Drew
+//July 5th 2020
+/*
 void joystick(void *arg)
 {
-	//Set LED pins to output
-	LPC_GPIO1 -> FIODIR |= (0b1011u << 28); 
-	LPC_GPIO2 -> FIODIR |= (0b11111 << 2);
-	
-	//Turn off all LED's (default are all on)
-	LPC_GPIO1 -> FIOCLR |= (0b1011u << 28); 
-	LPC_GPIO2 -> FIOCLR |= (0b11111 << 2);
-
 	//Polling loop
 	while(true)
 	{
@@ -47,6 +44,7 @@ void joystick(void *arg)
 		if(!north && !east && !south && !west)
 			LPC_GPIO2 -> FIOCLR |= (0b1u << 4); 
 		
+		//Allow for multi-threading with delay of 10 ticks
 		osDelay(10); 
 	}
 }
@@ -82,7 +80,7 @@ void adc(void *arg)
 			LPC_ADC->ADCR |= (0b1u << 24); 
 
 			//Wait while the conversion is not done
-			while(!(LPC_ADC->ADGDR & (0b1u << 31))){printf("112\n"); }
+			while(!(LPC_ADC->ADGDR & (0b1u << 31))){}
 
 			//Read in the adc result 
 			adc = (0b111111111111u << 4 & (LPC_ADC->ADGDR)) >> 4;
@@ -91,42 +89,84 @@ void adc(void *arg)
 			analog = adc / 1240.0; 
 
 			//Print the value of the output 
-			printf("Output: %.2f,\n", analog); 
+			printf("Output: %.2f\n", analog); 
 
-			osDelay(10);
+			//Thread Yield
+			osThreadYield(); 
 	}
 }
+
 void button(void *arg)
 {
-	//Polling loop
+	bool buttonPushed, ledOn, toggle; 
+	
+	//infinite polling loop
 	while(true)
 	{
-		if(!(LPC_GPIO2 -> FIOPIN & (1 << 6)))
+		
+		//read the state of the button 
+		buttonPushed = !((LPC_GPIO2->FIOPIN & (0b1u << 10)) >> 10);
+		//set toggle default to false
+		toggle = false; 
+		//read the value of the LED 
+		ledOn = ((LPC_GPIO2->FIOPIN & (0b1 << 6)) >> 6); 
+		
+		//if the button is being pushed
+		while(buttonPushed)
 		{
-			//Set LED to be on if button pressed
-			LPC_GPIO2 -> FIOSET |= (0b1u << 6);		
-			printf("button pressed\n"); 
+			//check for the button state 
+			buttonPushed = !((LPC_GPIO2->FIOPIN & (0b1u << 10)) >> 10);
+			//if the button is released, set toggle to true
+ 			if(!buttonPushed)
+				toggle = true; 
 		}
-		else
-		{
-			//Turn LED off again if button not pressed
-			LPC_GPIO2 -> FIOCLR |= (0b1u << 6); 
-		}
-		osThreadYield(); 
+		if(ledOn && toggle) 
+			LPC_GPIO2->FIOCLR |= (0b1u << 6); 
+		else if(!ledOn && toggle) 	
+			LPC_GPIO2->FIOSET |= (0b1u << 6); 
+		//Allow for multi-threading with delay of 10 ticks
+		osDelay(10);
+		
 	}
 }
 
 int main() 
 {
 	
-	osKernelInitialize();
 	
+	//Set LED pins to output
+	LPC_GPIO1 -> FIODIR |= (0b1011u << 28); 
+	LPC_GPIO2 -> FIODIR |= (0b11111 << 2);
+	
+	//Turn off all LED's (default are all on)
+	LPC_GPIO1 -> FIOCLR |= (0b1011u << 28); 
+	LPC_GPIO2 -> FIOCLR |= (0b11111 << 2);
+	
+	//Initialize Kernal
+	osKernelInitialize();
 	//Joystick Reading 
 	osThreadNew(joystick, NULL, NULL); 
 	//ADC Reading 
 	osThreadNew(adc, NULL, NULL); 
 	//Pushbutton Pressed
-//	osThreadNew(button, "Pushbutton", NULL); 
-	
+  osThreadNew(button, NULL, NULL); 
+	//Start the Kernal
 	osKernelStart();
+	
 }
+*/
+  
+const osMutexAttr_t Thread_Mutex_attr = {
+  "myThreadMutex",                              // human readable mutex name
+  osMutexRecursive | osMutexPrioInherit,        // attr_bits
+  NULL,                                         // memory for control block (default)
+  0U                                            // size for control block (default)
+};
+  
+ int main() {
+  osMutexId_t mutex_id = osMutexNew(&Thread_Mutex_attr); 
+	printf("%d", mutex_id.cb_size);
+  //osMutexId_t mutex_id2 = osMutexNew(&Thread_Mutex_attr);   // use attributes from defined structure
+}
+
+
