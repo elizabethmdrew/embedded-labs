@@ -1,5 +1,5 @@
 # embedded-labs
-mte 241 labs
+MTE 241 labs
 
 Lab 1: Binary Search Tree 
 
